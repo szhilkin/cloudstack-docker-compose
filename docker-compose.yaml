@@ -1,0 +1,35 @@
+db:
+    environment:
+      MYSQL_ROOT_PASSWORD: "cloudstackdemo"
+    image: mysql/mysql-server
+    ports:
+      - "3306:3306"
+mgmt:
+    environment:
+      MYSQL_PORT_3306_TCP_ADDR: "db_1"
+      MYSQL_ENV_MYSQL_ROOT_PASSWORD: "cloudstackdemo"
+    image: docker.io/cloudstack/management_centos6
+    ports:
+      - "8250:8250"
+      - "8080:8080"
+    links:
+      - db
+      - usage
+
+usage:
+    environment:
+	MYSQL_PORT_3306_TCP_ADDR: "db_1"
+	MYSQL_USAGE_DB_USER: "cloud"
+	MYSQL_USAGE_DB_PASSWORD: "cloud"
+    image: cloudstack/usage
+    links:
+      - db
+
+ec2stack:
+    image: cloudstack/cloudstack-ec2stack
+    links:
+      - mgmt
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./ec2stack:/root/.ec2stack
