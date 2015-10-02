@@ -1,1 +1,4 @@
 ec2stack/ec2stack.sqlite
+*.swp
+*.iso
+*.qcow2
