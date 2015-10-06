@@ -1,0 +1,60 @@
+db:
+    container_name: mysql-server
+    environment:
+      MYSQL_ROOT_PASSWORD: "cloudstackdemo"
+    image: mysql/mysql-server
+    ports:
+      - "3306:3306"
+mgmt:
+    container_name: cloudstack-mgmt
+    environment:
+        DEV_API: "true"
+        HYPERVISOR_TEMPLATE: "kvm"
+        MYSQL_PORT_3306_TCP_ADDR: "database"
+        MYSQL_ENV_MYSQL_ROOT_PASSWORD: "cloudstackdemo"
+        CLOUDSTACK_DB_USER: "cloud"
+        CLOUDSTACK_DB_PASSWORD: "password"
+    image: cloudstack/management_centos6
+    privileged: true
+    ports:
+        - "8250:8250"
+        - "8080:8080"
+        - "8096:8096"
+        #- "2049:2049"
+        # - "111:111"
+    links:
+        - db:database
+        #- usage:usage
+    volumes:
+        - ./mgmt:/mgmt
+        - ./mgmt/exports:/exports
+    command: /mgmt/init2.sh
+
+#usage:
+#    container_name: cloudstack-usage
+#    environment:
+#        MYSQL_PORT_3306_TCP_ADDR: "database"
+#        MYSQL_USAGE_DB_USER: "cloud"
+#        MYSQL_USAGE_DB_PASSWORD: "password"
+#    image: cloudstack/usage
+#    links:
+#        - db:database
+
+#ec2stack:
+#    container_name: cloudstack-ec2stack
+#    image: cloudstack/cloudstack-ec2stack
+#    links:
+#        - mgmt:mgmt
+#    ports:
+#        - "5000:5000"
+#    volumes:
+#        - ./ec2stack:/root/.ec2stack
+kvm:
+    container_name: cloudstack-kvm
+    image: cloudstack/cloudstack-kvm
+    cap_add:
+        - ALL
+    privileged: true
+    net: host
+    volumes:
+        - /dev/pts:/dev/pts
