@@ -10,7 +10,7 @@ set -e
 EXEC="cloudmonkey -p local -c cloudmonkey.config"
 
 # Create the Zone
-#echo "Creating Zone"
+echo "Creating Zone"
 DUMMY=$($EXEC create zone name="CloudStack Docker Demo - Basic" networktype=Basic dns1=8.8.8.8 internaldns1=8.8.8.8)
 ZONE_ID=$($EXEC list zones filter=id | grep id | cut -f 3 -d ' ')
 
