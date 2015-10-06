@@ -3,3 +3,4 @@ ec2stack/ec2stack.sqlite
 *.iso
 *.qcow2
 template.properties
+mgmt/exports/*
