@@ -1,0 +1,79 @@
+#!/bin/bash
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# update database connection
+# start cloudstack-management server
+#/usr/bin/cloudstack-setup-databases cloud:password@$MYSQL_PORT_3306_TCP_ADDR
+set -x
+echo "root:password" | chpasswd
+
+
+sed -i 's/HWADDR/#HWADDR/' /etc/sysconfig/network-scripts/ifcfg-eth0
+
+/sbin/ifconfig
+
+# We are using host networking, set ssh port to 2222 to not interfere with host
+# Also, enable root logins
+
+if [ -f /etc/ssh/sshd_config ]; then
+    #sed -i 's/.*Port 22.*/Port 2222/' /etc/ssh/sshd_config
+    sed -i 's/.*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+else
+    cat << EOF > /etc/ssh/sshd_config
+#Port 2222
+PermitRootLogin yes
+EOF
+
+fi
+
+service ssh start
+
+# For NFS access
+service rpcbind start
+
+#Configure libvirt
+sed -i 's/.*listen_tls.*/listen_tls=0/' /etc/libvirt/libvirtd.conf
+sed -i 's/.*listen_tcp.*/listen_tcp=1/' /etc/libvirt/libvirtd.conf
+sed -i 's/.*tcp_port.*/tcp_port="16509"/' /etc/libvirt/libvirtd.conf
+sed -i 's/.*auth_tcp.*/auth_tcp="none"/' /etc/libvirt/libvirtd.conf
+sed -i 's/.*mdns_adv.*/mdns_adv=0/' /etc/libvirt/libvirtd.conf
+
+if [ -f /etc/sysconfig/libvirtd ]; then
+    # RedHat Host
+    sed -i "s/LIBVIRTD_ARGS=.*/LIBVIRTD_ARGS=-l/" /etc/sysconfig/libvirtd
+    service libvirtd start
+fi
+
+if [ -f /etc/default/libvirt-bin ]; then
+    # Ubuntu/Debian Host
+    sed -i 's/libvirtd_opts=.*/libvirtd_opts="-d -l"/' /etc/default/libvirt-bin
+    service libvirt-bin start
+fi
+
+sleep 30
+/sbin/ifconfig -a
+
+# Ugly hack to make sure the container doesn't exit
+until [ -f /var/log/cloudstack/agent/agent.log ]; do
+    sleep 10
+done
+while true; do
+    tail -f /var/log/cloudstack/agent/agent.log
+    sleep 3
+done
+tail -f /dev/null

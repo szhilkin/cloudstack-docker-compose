@@ -1,0 +1,46 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+FROM ubuntu:14.04
+
+MAINTAINER "Apache CloudStack" <dev@cloudstack.apache.org>
+LABEL Vendor="Apache.org" License="ApacheV2" Version="4.6.0"
+
+ENV PKG_URL=http://jenkins.buildacloud.org/job/package-deb-master/lastSuccessfulBuild/artifact/dist/debian/
+
+#RUN adduser cloud
+
+# install CloudStack
+
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install -y curl openssh-server gdebi-core libvirt-bin
+RUN curl -O ${PKG_URL}/cloudstack-common_4.6.0-SNAPSHOT_all.deb
+RUN curl -O ${PKG_URL}/cloudstack-agent_4.6.0-SNAPSHOT_all.deb
+RUN gdebi -n cloudstack-common_4.6.0-SNAPSHOT_all.deb 
+RUN gdebi -n cloudstack-agent_4.6.0-SNAPSHOT_all.deb
+RUN rm *.deb
+
+RUN apt-get autoremove -y
+RUN apt-get autoclean
+
+
+COPY init.sh_kvmhost /root/init.sh
+RUN chmod +x /root/init.sh
+#RUN chown cloud /var/log/cloudstack/agent
+
+CMD ["/root/init.sh"]
