@@ -28,13 +28,12 @@ ENV PKG_URL=http://jenkins.buildacloud.org/job/package-deb-master/lastSuccessful
 
 RUN apt-get update
 RUN apt-get upgrade -y
-RUN apt-get install -y curl openssh-server gdebi-core libvirt-bin
+RUN apt-get install -y curl openssh-server gdebi-core
 RUN curl -O ${PKG_URL}/cloudstack-common_4.6.0-SNAPSHOT_all.deb
 RUN curl -O ${PKG_URL}/cloudstack-agent_4.6.0-SNAPSHOT_all.deb
 RUN gdebi -n cloudstack-common_4.6.0-SNAPSHOT_all.deb 
 RUN gdebi -n cloudstack-agent_4.6.0-SNAPSHOT_all.deb
 RUN rm *.deb
-
 RUN apt-get autoremove -y
 RUN apt-get autoclean
 RUN locale-gen en_US.UTF-8
@@ -42,6 +41,5 @@ RUN locale-gen en_US.UTF-8
 
 COPY init.sh_kvmhost /root/init.sh
 RUN chmod +x /root/init.sh
-#RUN chown cloud /var/log/cloudstack/agent
 
 CMD ["/root/init.sh"]

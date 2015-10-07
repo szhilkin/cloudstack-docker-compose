@@ -46,6 +46,7 @@ service ssh start
 # For NFS access
 service rpcbind start
 
+usermod -G tty libvirt-qemu
 #Configure libvirt
 sed -i 's/.*listen_tls.*/listen_tls=0/' /etc/libvirt/libvirtd.conf
 sed -i 's/.*listen_tcp.*/listen_tcp=1/' /etc/libvirt/libvirtd.conf

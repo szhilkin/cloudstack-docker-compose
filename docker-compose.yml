@@ -51,10 +51,12 @@ mgmt:
 #        - ./ec2stack:/root/.ec2stack
 kvm:
     container_name: cloudstack-kvm
+    pid: host
     image: cloudstack/cloudstack-kvm
-    cap_add:
-        - ALL
     privileged: true
     net: host
     volumes:
+        - /dev/kvm:/dev/kvm
+        - /dev/net/tun:/dev/net/tun
+        - /lib/modules:/lib/modules:ro
         - /dev/pts:/dev/pts
