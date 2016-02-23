@@ -8,14 +8,14 @@ log_file = /root/.cloudmonkey/log
 
 [ui]
 color = true
-prompt = 🐵 > 
+prompt = 🐵> 
 display = default
 
 [local]
 username = admin
 domain = /
 apikey = 
-url = http://localhost:8080/client/api
+url = http://172.17.0.3:8080/client/api
 expires = 600
 signatureversion = 3
 secretkey = 

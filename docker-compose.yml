@@ -2,13 +2,13 @@ db:
     container_name: mysql-server
     environment:
       MYSQL_ROOT_PASSWORD: "cloudstackdemo"
-    image: mysql/mysql-server
+    image: mysql/mysql-server:5.5
     ports:
       - "3306:3306"
 mgmt:
     container_name: cloudstack-mgmt
     environment:
-        DEV_API: "true"
+#        DEV_API: "true"
         HYPERVISOR_TEMPLATE: "kvm"
         MYSQL_PORT_3306_TCP_ADDR: "database"
         MYSQL_ENV_MYSQL_ROOT_PASSWORD: "cloudstackdemo"
@@ -59,4 +59,3 @@ kvm:
         - /dev/kvm:/dev/kvm
         - /dev/net/tun:/dev/net/tun
         - /lib/modules:/lib/modules:ro
-        - /dev/pts:/dev/pts
