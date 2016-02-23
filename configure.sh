@@ -131,6 +131,9 @@ exportfs -rav # Save exports
 
 # Restart NFS
 print_green '[NFS] Restarting NFS'
+pkill rpc
+pkill rpcbind
+pkill nfs
 service nfslock stop
 service nfs stop
 service rpc-statd stop
