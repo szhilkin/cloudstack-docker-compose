@@ -99,9 +99,9 @@ phy_id=`execute_cmd "create physicalnetwork name=phy-network zoneid=$zone_id" | 
 
 print_green "[Cloudmonkey] Adding guest traffic"
 # kvmnetworklabel=cloudbr0
-execute_cmd "add traffictype traffictype=Guest physicalnetworkid=$phy_id"
+execute_cmd "add traffictype traffictype=Guest physicalnetworkid=$phy_id kvmnetworklabel=cloudbr0"
 print_green "[Cloudmonkey] Adding mgmt traffic"
-execute_cmd "add traffictype traffictype=Management physicalnetworkid=$phy_id"
+execute_cmd "add traffictype traffictype=Management physicalnetworkid=$phy_id kvmnetworklabel=docker0"
 print_green "[Cloudmonkey] Enabling physicalnetwork"
 execute_cmd "update physicalnetwork state=Enabled id=$phy_id"
  
@@ -137,7 +137,8 @@ do
   print_green "[Cloudmonkey] Adding host" $host_ip;
   execute_cmd "add host zoneid=$zone_id podid=$pod_id clusterid=$cluster_id hypervisor=$hpvr username=$host_user password=$host_passwd url=http://$host_ip";
 done;
-#service nfs restart 
+
+service nfs restart 
 print_green "[Cloudmonkey] Adding primary storage"
 execute_cmd "create storagepool zoneid=$zone_id podid=$pod_id clusterid=$cluster_id name=DemoPrimary url=$prm_storage"
  
