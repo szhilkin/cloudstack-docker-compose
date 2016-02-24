@@ -134,7 +134,7 @@ print_green '[NFS] Restarting NFS'
 pkill rpc
 pkill rpcbind
 pkill nfs
-service nfslock stop
+#service nfslock stop
 service nfs stop
 service rpc-statd stop
 service rpcbind stop
@@ -142,7 +142,7 @@ umount /proc/fs/nfsd
 service rpcbind start
 service rpc-statd start
 service nfs start
-service nfslock start
+#service nfslock start
 
 ##################################################################################
 ##                                   Step 2                                     ##
@@ -178,8 +178,7 @@ print_title '[Cloudmonkey] (Hypervisor) Configuring the cloudstack environment'
 # First configure the bridges
 ################################################################################
 # add cloudbr0 interface
-print_green '[Network] Adding cloudbr0 bridge'
-
+print_green '[Network] Adding cloudbr0 bridge and make sure that docker0 exists'
 if ! brctl show | grep -e "^cloudbr0" >/dev/null; then
     brctl addbr cloudbr0
 fi
@@ -189,21 +188,12 @@ if ! brctl show | grep -e "^docker0" >/dev/null; then
     print_error 'docker0 bridge does not exist, exiting'
 fi
 
-print_green '[Network] Adding the docker0.100 VLAN'
-
-if ! ip link | grep docker0.100@ >/dev/null; then
-    ip link add link docker0 name docker0.100 type vlan id 100
-fi
-
-# Add docker0.100 VLAN to the cloudbr0 bridge
-print_green '[Network] Adding docker0.100 VLAN to the cloudbr0 bridge'
-
-# Add docker0.100 VLAN to the cloudbr0 bridge
-print_green '[Network] Adding docker0.100 VLAN to the cloudbr0 bridge'
-
-if ! brctl show cloudbr0 | grep docker0.100 >/dev/null; then
-    brctl addif cloudbr0 docker0.100
-fi
+# Create 2 dummy interfaces and assign to the bridges
+print_title '[Network] Adding 2 dummy interfaces to make the bridges happy'
+ip link add bonddocker name bonddocker type dummy
+ip link add bondcloudbr name bondcloudbr type dummy
+brctl addif docker0 bonddocker
+brctl addif cloudbr0 bondcloudbr
 
 # Now the cloudmonkey setup
 ##################################################################################
@@ -226,21 +216,6 @@ print_green '[Network] Removing unneeded lines from iptables'
 for i in $(iptables -L FORWARD --line-numbers | grep -E "DROP\s*all" | awk '{ print $1 }'); do 
     iptables -D FORWARD $i
 done
-
-# TODO: Needs to sleep here, we need to wait till the agent caught up and created the system vm's
-# TODO: So this will need to move to it's own step
-# Add vnet1 (eth1 SSVM) and vnet4 (eth1 CPVM) to docker0 bridge
-print_green '[Network] Adding vnet1 and vnet4 to the docker0 bridge'
-
-if ! brctl show docker0 | grep vnet1; then 
-    brctl delif cloudbr0 vnet1
-    brctl addif docker0 vnet1
-fi
-
-if ! brctl show docker0 | grep vnet4; then
-    brctl delif cloudbr0 vnet4
-    brctl addif docker0 vnet4
-fi
 
 ifconfig cloudbr0 10.30.28.1 netmask 255.255.255.0
 ifconfig cloudbr0 up
