@@ -20,6 +20,8 @@ FROM ubuntu:14.04
 MAINTAINER "Apache CloudStack" <dev@cloudstack.apache.org>
 LABEL Vendor="Apache.org" License="ApacheV2" Version="4.6.0"
 
+ARG $HTTP_PROXY
+ENV http_proxy=$HTTP_PROXY
 ENV PKG_URL=http://jenkins.buildacloud.org/job/package-deb-master/lastSuccessfulBuild/artifact/dist/debian/
 
 #RUN adduser cloud

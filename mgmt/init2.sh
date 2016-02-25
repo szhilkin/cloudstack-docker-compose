@@ -1,24 +1,37 @@
 #!/bin/bash
 
 # Configure NFS
-yum install -y portmap nfs-utils openssh-server
+#yum install -y portmap nfs-utils openssh-server
+yum install -y portmap openssh-server
 echo "root:password" | chpasswd
 sed -i 's/.*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
-cat <<EOF > /etc/exports
-/exports  *(rw,async,no_root_squash,no_subtree_check,fsid=0)
-/mgmt *(rw,async,no_root_squash,no_subtree_check,fsid=0)
-EOF
+#cat <<EOF > /etc/exports
+#/exports  *(rw,async,no_root_squash,no_subtree_check,fsid=0)
+#/mgmt *(rw,async,no_root_squash,no_subtree_check,fsid=0)
+#EOF
 
 #Start NFS services
 service rpcbind start
-service nfs start
-service nfs restart
+#service nfs start
+#service nfs restart
+service nfs stop
 service sshd start
 
-exportfs -a
+#exportfs -a
+
+# Create free loop device
+if [ ! -f /dev/loop6 ]; then
+    mknod /dev/loop6 -m0660 b 7 6
+fi
+
+# Detach loop device if already mounted
+if (losetup -a | grep loop6); then
+    umount /dev/loop6
+    losetup -d /dev/loop6
+fi
 
 # Wait for MySQL server
-sleep 10
+#sleep 10
 
 # Install systemvm template
 #if [ ! -f /mgmt/exports/secondary/template/tmpl/1/3/template.properties ]; then
