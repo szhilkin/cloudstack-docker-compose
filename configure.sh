@@ -6,19 +6,21 @@
 #   DESCRIPTION: This script will configure the entire cloudstack environment
 #                as soon as the docker-compose up script has finished booting
 #
-#       OPTIONS:  
+#       OPTIONS:
 #
 #  REQUIREMENTS:  docker-compose up should be finished
 #        AUTHOR:  Xavier Geerinck (xavier.geerinck@gmail.com)
 #       COMPANY:  /
-#       VERSION:  1.0.0
+#       VERSION:  1.1.0
 #       CREATED:  17/FEB/16 10:36 CET
+#   LAST_UPDATE:  01/MAR/16 15:12 CET
 #      REVISION:  1.0 - Base POC script
+#		  1.1 - Cleanup + Fixes to the network
 #
 #################################################################################
-# Steps: 
+# Steps:
 #################################################################################
-# 
+#
 #  1. (Hypervisor) NFS Server
 #      1.1. Install nfs if not installed
 #      1.2. Configure ports
@@ -41,6 +43,16 @@
 #  6. Done
 #
 ##################################################################################
+##                                 Variables                                    ##
+##################################################################################
+
+# The physical interface that we will use for public connections
+pint=enp2s0f0
+
+# THe physical interface IP
+pint_ip=10.30.28.4
+
+##################################################################################
 ##                                   Utils                                      ##
 ##################################################################################
 
@@ -54,6 +66,10 @@ function print_blue {
 
 function print_red {
     echo -e "\e[31m$@\e[39m"
+}
+
+function print_yellow {
+    echo -e "\e[33m$@\e[39m"
 }
 
 function print_title {
@@ -75,7 +91,7 @@ print_title '[NFS] (Hypervisor) Getting the NFS server ready'
 # Install NFS if not installed
 print_green '[NFS] Installing NFS if it is not installed'
 
-if ! yum list installed "nfs-utils" >/dev/null 2>&1; then 
+if ! yum list installed "nfs-utils" >/dev/null 2>&1; then
     yum install -y nfs-utils
 fi
 
@@ -109,7 +125,7 @@ iptables -A INPUT -m state --state NEW -p tcp --dport 32803 -j ACCEPT # LOCKD_TC
 iptables -A INPUT -m state --state NEW -p udp --dport 32769 -j ACCEPT # LOCKD_UDPPORT
 iptables -A INPUT -m state --state NEW -p tcp --dport 892   -j ACCEPT # Mountd
 iptables -A INPUT -m state --state NEW -p udp --dport 892   -j ACCEPT # Mountd
-iptables -A INPUT -m state --state NEW -p tcp --dport 875   -j ACCEPT 
+iptables -A INPUT -m state --state NEW -p tcp --dport 875   -j ACCEPT
 iptables -A INPUT -m state --state NEW -p udp --dport 875   -j ACCEPT
 iptables -A INPUT -m state --state NEW -p tcp --dport 662   -j ACCEPT # Statd
 iptables -A INPUT -m state --state NEW -p udp --dport 662   -j ACCEPT # Statd
@@ -134,13 +150,11 @@ print_green '[NFS] Restarting NFS'
 pkill rpc
 pkill rpcbind
 pkill nfs
-#service nfslock stop
+service nfslock stop
 service nfs stop
-service rpc-statd stop
 service rpcbind stop
 umount /proc/fs/nfsd
 service rpcbind start
-service rpc-statd start
 service nfs start
 #service nfslock start
 
@@ -177,23 +191,35 @@ print_title '[Cloudmonkey] (Hypervisor) Configuring the cloudstack environment'
 
 # First configure the bridges
 ################################################################################
-# add cloudbr0 interface
+# add cloudbr0 interface and configure it
 print_green '[Network] Adding cloudbr0 bridge and make sure that docker0 exists'
 if ! brctl show | grep -e "^cloudbr0" >/dev/null; then
     brctl addbr cloudbr0
-fi
 
-# Add docker0.100 VLAN
-if ! brctl show | grep -e "^docker0" >/dev/null; then
-    print_error 'docker0 bridge does not exist, exiting'
-fi
+    # Make sure that the docker0 interface exists
+    if ! brctl show | grep -e "^docker0" >/dev/null; then
+        print_error 'docker0 bridge does not exist, exiting'
+    fi
 
-# Create 2 dummy interfaces and assign to the bridges
-print_title '[Network] Adding 2 dummy interfaces to make the bridges happy'
-ip link add bonddocker name bonddocker type dummy
-ip link add bondcloudbr name bondcloudbr type dummy
-brctl addif docker0 bonddocker
-brctl addif cloudbr0 bondcloudbr
+    # Create 2 dummy interfaces and assign to the bridges
+    print_title '[Network] Adding 2 dummy interfaces to make the bridges happy'
+    ip link add bond007-docker0 name bond007-docker0 type dummy
+    brctl addif docker0 bond007-docker0
+
+    ip link add bond007-br0 name bond007-br0 type dummy
+    brctl addif cloudbr0 bond007-br0
+
+    # Configure the bridge to use our physical interface
+    print_title '[Network] Configuring the bridge to use the physical interface'
+    print_yellow '[WARNING] Connection may be lost if the configuration fails!'
+    print_yellow '[WARNING] On fail, fix manually by point an ip to the physical'
+    print_yellow '[WARNING] interface and remove the interface from the bridge'
+    ifconfig down cloudbr0 && brctl stp cloudbr0 on && ip addr add ${pint_ip}/24 dev cloudbr0 && brctl addif cloudbr0 ${pint} && ip addr del ${pint_ip}/24 dev ${pint} && ip link set cloudbr0 up
+
+    print_title '[Network] Allowing network traffic to the docker0 bridge'
+    ip link add link docker0 name docker0.100 type vlan id 100
+    brctl addif cloudbr0 docker0.100
+fi
 
 # Now the cloudmonkey setup
 ##################################################################################
@@ -213,9 +239,6 @@ print_title '[Network] (Hypervisor) Configuring the network'
 print_green '[Network] Removing unneeded lines from iptables'
 
 # Drop specific rules from the iptables output
-for i in $(iptables -L FORWARD --line-numbers | grep -E "DROP\s*all" | awk '{ print $1 }'); do 
+for i in $(iptables -L FORWARD --line-numbers | grep -E "DROP\s*all" | awk '{ print $1 }'); do
     iptables -D FORWARD $i
 done
-
-ifconfig cloudbr0 10.30.28.1 netmask 255.255.255.0
-ifconfig cloudbr0 up

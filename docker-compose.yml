@@ -14,6 +14,7 @@ mgmt:
         MYSQL_ENV_MYSQL_ROOT_PASSWORD: "cloudstackdemo"
         CLOUDSTACK_DB_USER: "cloud"
         CLOUDSTACK_DB_PASSWORD: "password"
+        http_proxy: ""
     image: cloudstack/management_centos6
     privileged: true
     ports:
@@ -51,7 +52,9 @@ mgmt:
 #        - ./ec2stack:/root/.ec2stack
 kvm:
     container_name: cloudstack-kvm
-    pid: host
+    environment:
+        http_proxy: ""
+#    pid: host
     image: cloudstack/cloudstack-kvm
     privileged: true
     net: host
