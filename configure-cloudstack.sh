@@ -156,4 +156,9 @@ while [ ${#arr_vms[@]} -eq 0 ]; do
     sleep 10
     arr_vms=(`execute_cmd "list systemvms state=Running" | grep "^name =" | cut -d ' ' -f 3`)
     print_yellow "[Cloudmonkey] Waiting till the systemvms are up"
+
+    # Drop specific rules from the iptables output
+    for i in $(iptables -L FORWARD --line-numbers | grep -E "DROP\s*all" | awk '{ print $1 }'); do
+        iptables -D FORWARD $i
+    done
 done
