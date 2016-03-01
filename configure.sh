@@ -6,19 +6,21 @@
 #   DESCRIPTION: This script will configure the entire cloudstack environment
 #                as soon as the docker-compose up script has finished booting
 #
-#       OPTIONS:  
+#       OPTIONS:
 #
 #  REQUIREMENTS:  docker-compose up should be finished
 #        AUTHOR:  Xavier Geerinck (xavier.geerinck@gmail.com)
 #       COMPANY:  /
-#       VERSION:  1.0.0
+#       VERSION:  1.1.0
 #       CREATED:  17/FEB/16 10:36 CET
+#   LAST_UPDATE:  01/MAR/16 15:12 CET
 #      REVISION:  1.0 - Base POC script
+#		  1.1 - Cleanup + Fixes to the network
 #
 #################################################################################
-# Steps: 
+# Steps:
 #################################################################################
-# 
+#
 #  1. (Hypervisor) NFS Server
 #      1.1. Install nfs if not installed
 #      1.2. Configure ports
@@ -89,7 +91,7 @@ print_title '[NFS] (Hypervisor) Getting the NFS server ready'
 # Install NFS if not installed
 print_green '[NFS] Installing NFS if it is not installed'
 
-if ! yum list installed "nfs-utils" >/dev/null 2>&1; then 
+if ! yum list installed "nfs-utils" >/dev/null 2>&1; then
     yum install -y nfs-utils
 fi
 
@@ -123,7 +125,7 @@ iptables -A INPUT -m state --state NEW -p tcp --dport 32803 -j ACCEPT # LOCKD_TC
 iptables -A INPUT -m state --state NEW -p udp --dport 32769 -j ACCEPT # LOCKD_UDPPORT
 iptables -A INPUT -m state --state NEW -p tcp --dport 892   -j ACCEPT # Mountd
 iptables -A INPUT -m state --state NEW -p udp --dport 892   -j ACCEPT # Mountd
-iptables -A INPUT -m state --state NEW -p tcp --dport 875   -j ACCEPT 
+iptables -A INPUT -m state --state NEW -p tcp --dport 875   -j ACCEPT
 iptables -A INPUT -m state --state NEW -p udp --dport 875   -j ACCEPT
 iptables -A INPUT -m state --state NEW -p tcp --dport 662   -j ACCEPT # Statd
 iptables -A INPUT -m state --state NEW -p udp --dport 662   -j ACCEPT # Statd
@@ -154,7 +156,7 @@ service rpcbind stop
 umount /proc/fs/nfsd
 service rpcbind start
 service nfs start
-service nfslock start
+#service nfslock start
 
 ##################################################################################
 ##                                   Step 2                                     ##
@@ -206,7 +208,7 @@ if ! brctl show | grep -e "^cloudbr0" >/dev/null; then
 
     ip link add bond007-br0 name bond007-br0 type dummy
     brctl addif cloudbr0 bond007-br0
-    
+
     # Configure the bridge to use our physical interface
     print_title '[Network] Configuring the bridge to use the physical interface'
     print_yellow '[WARNING] Connection may be lost if the configuration fails!'
@@ -237,6 +239,6 @@ print_title '[Network] (Hypervisor) Configuring the network'
 print_green '[Network] Removing unneeded lines from iptables'
 
 # Drop specific rules from the iptables output
-for i in $(iptables -L FORWARD --line-numbers | grep -E "DROP\s*all" | awk '{ print $1 }'); do 
+for i in $(iptables -L FORWARD --line-numbers | grep -E "DROP\s*all" | awk '{ print $1 }'); do
     iptables -D FORWARD $i
 done
